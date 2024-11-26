@@ -1,54 +1,140 @@
 import { useState, useEffect } from "react";
 import { Player } from "../types/types";
+import EditPlayer from "./EditPlayer";
 interface PlayerListProps {
   apiUrl: string;
   searchQuery: string;
 }
 
-export const PlayerList: React.FC<PlayerListProps> = ({ apiUrl, searchQuery }) => {
+export const PlayerList: React.FC<PlayerListProps> = ({
+  apiUrl,
+  searchQuery,
+}) => {
   const [players, setPlayers] = useState<Player[]>([]);
-  const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([])
+  const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
+  const [isFormVisible, setIsFormVisible] = useState<{
+    [key: string]: boolean;
+  }>({});
 
   useEffect(() => {
     fetchPlayers();
-  });
+  }, []);
 
   useEffect(() => {
-    if(searchQuery){
-        setFilteredPlayers(
-            players.filter((player) => 
-                player.name.toLowerCase().includes(searchQuery.toLowerCase())
-            )
+    if (searchQuery) {
+      setFilteredPlayers(
+        players.filter((player) =>
+          player.name.toLowerCase().includes(searchQuery.toLowerCase())
         )
+      );
     } else {
-        setFilteredPlayers(players)
+      setFilteredPlayers(players);
     }
-  }, [searchQuery, players])
+  }, [searchQuery, players]);
+
+  const handleToggleForm = (playerId: number) => {
+    setIsFormVisible((prevState) => ({
+      ...prevState,
+      [playerId]: !prevState[playerId],
+    }));
+  };
 
   const fetchPlayers = async () => {
     try {
       const response = await fetch(`${apiUrl}/api/fortniteplayers`);
       const data: Player[] = await response.json();
       setPlayers(data);
-      setFilteredPlayers(data)
+      setFilteredPlayers(data);
+      console.log(data);
     } catch {
       console.error("failed to get players");
     }
   };
+
+  const handleUpdate = async (updatedPlayer: Player) => {
+    console.log(updatedPlayer);
+    console.log("Update", updatedPlayer.name, updatedPlayer.id);
+    try {
+      const response = await fetch(`${apiUrl}/api/fortniteplayers/${updatedPlayer.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedPlayer),
+      })
+     if(!response.ok){
+      console.error(`Failed to update player ${updatedPlayer.name}`)
+     } 
+     const data = await response.json();
+     console.log(data)
+     setPlayers(prevState => 
+        prevState.map(player =>
+          player.id === updatedPlayer.id ? updatedPlayer : player
+        )
+     )
+     setFilteredPlayers(prevState => 
+      prevState.map(player =>
+        player.id === updatedPlayer.id ? updatedPlayer : player
+      )
+     )
+     setIsFormVisible((prevState) => ({
+      ...prevState,
+      [updatedPlayer.id]: false,
+     }))
+    } catch (error) {
+      console.error(error);
+    }
+  };
+  const handleDelete = async (player: Player) => {
+    console.log(player);
+    console.log("Delete", player.name, player.id);
+  };
+
+  // find the difference between original object and new object
+  // save the difference
+  // rerender the component that has the difference, but only that component
+
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {filteredPlayers.map((player) => (
-        <div key={player.id} className="p-4 border rounded shadow">
-          <h3 className="text-lg font-bold">{player.name}</h3>
-          <p>{player.team}</p>
-          <button
-            className="text-red-500"
-            onClick={() => console.log("Delete", player.name, player.id)}
+    <div className="container mx-auto px-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+        {filteredPlayers.map((player) => (
+          <div
+            key={player.id}
+            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
           >
-            Delete
-          </button>
-        </div>
-      ))}
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">
+              {player.name}
+            </h3>
+            <p className="text-gray-600 mb-2">
+              Server: <span className="font-medium">{player.server}</span>{" "}
+            </p>
+            <p className="text-gray-600 mb-2">
+              Earnings: <span className="font-medium">{player.earnings}</span>
+            </p>
+            <p className="text-gray-600 mb-4">
+              Age: <span className="font-medium">{player.age}</span>{" "}
+            </p>
+            <div className="flex justify-between items-center">
+              <button
+                className="bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors"
+                onClick={() => handleToggleForm(player.id)}
+              >
+                {isFormVisible[player.id] ? "Cancel" : "Edit"}
+              </button>
+              {isFormVisible[player.id] && (
+                <EditPlayer player={player} onSave={handleUpdate} />
+              )}
+              <button
+                className="bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition-colors"
+                onClick={() => handleDelete(player)}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
