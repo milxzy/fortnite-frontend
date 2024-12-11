@@ -15,6 +15,7 @@ export const PlayerList: React.FC<PlayerListProps> = ({
   const [isFormVisible, setIsFormVisible] = useState<{
     [key: string]: boolean;
   }>({});
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchPlayers();
@@ -39,17 +40,24 @@ export const PlayerList: React.FC<PlayerListProps> = ({
     }));
   };
 
-  const fetchPlayers = async () => {
-    try {
-      const response = await fetch(`${apiUrl}/api/fortniteplayers`);
-      const data: Player[] = await response.json();
-      setPlayers(data);
-      setFilteredPlayers(data);
-      console.log(data);
-    } catch {
-      console.error("failed to get players");
+const fetchPlayers = async () => {
+  try {
+    setIsLoading(true)
+    const response = await fetch(`${apiUrl}/api/fortniteplayers`);
+    if (!response.ok) {
+      console.error(`Failed to fetch players, status: ${response.status}`);
+      return;
     }
-  };
+    const data: Player[] = await response.json();
+    setPlayers(data);
+    setFilteredPlayers(data);
+    console.log(data)
+  } catch (error) {
+    console.error("Error fetching players:", error);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleUpdate = async (updatedPlayer: Player) => {
     console.log(updatedPlayer);
@@ -57,6 +65,7 @@ export const PlayerList: React.FC<PlayerListProps> = ({
     try {
       const response = await fetch(`${apiUrl}/api/fortniteplayers/${updatedPlayer.id}`, {
         method: "PUT",
+        // mode: 'no-cors',
         headers: {
           "Content-Type": "application/json",
         },
@@ -96,7 +105,13 @@ export const PlayerList: React.FC<PlayerListProps> = ({
 
 
   return (
-    <div className="container mx-auto px-4">
+  <div className="container mx-auto px-4">
+    {isLoading ? (
+      <div className="text-center py-6">
+        <span>Loading players...</span> {/* Simple loading text */}
+        {/* Or a spinner can be added here */}
+      </div>
+    ) : (
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         {filteredPlayers.map((player) => (
           <div
@@ -107,13 +122,16 @@ export const PlayerList: React.FC<PlayerListProps> = ({
               {player.name}
             </h3>
             <p className="text-gray-600 mb-2">
-              Server: <span className="font-medium">{player.server}</span>{" "}
+              Server: <span className="font-medium">{player.server}</span>
             </p>
             <p className="text-gray-600 mb-2">
               Earnings: <span className="font-medium">{player.earnings}</span>
             </p>
             <p className="text-gray-600 mb-4">
-              Age: <span className="font-medium">{player.age}</span>{" "}
+              Age: <span className="font-medium">{player.age}</span>
+            </p>
+            <p className="text-gray-600 mb-4">
+              Team: <span className="font-medium">{player.teamName}</span>
             </p>
             <div className="flex justify-between items-center">
               <button
@@ -135,8 +153,10 @@ export const PlayerList: React.FC<PlayerListProps> = ({
           </div>
         ))}
       </div>
-    </div>
-  );
+    )}
+  </div>
+);
+
 };
 
 export default PlayerList;

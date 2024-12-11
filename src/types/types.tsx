@@ -5,6 +5,6 @@ export interface Player {
     server: string;
     age: number;
     TeamId: number;
-    team: string;
+    teamName: string;
     
 }
