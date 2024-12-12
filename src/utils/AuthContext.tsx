@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode } from "react"
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 interface AuthContextType {
     token: string | null;
@@ -10,12 +11,21 @@ interface AuthContextType {
     error: string | null;
 }
 
+
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [token, setToken] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
     const router = useRouter();
+
+    useEffect(() => {
+        const storedToken = localStorage.getItem("authToken");
+        if (storedToken) {
+            setToken(storedToken);
+        }
+    }, []);
       
 
     const login = async (email: string, password: string) => {
@@ -34,6 +44,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
             const { token } = await response.json();
             setToken(token)
+            localStorage.setItem("authToken", token);
+            console.log(token)
             document.cookie = `token=${token}; path=/; secure; httponly; samesite=strict`;
             router.push('/search')
         } catch (error){
@@ -43,6 +55,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     const logout = () => {
         setToken(null);
+        localStorage.removeItem("authToken");
         document.cookie = `token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;`;
         router.push('/login')
     };
