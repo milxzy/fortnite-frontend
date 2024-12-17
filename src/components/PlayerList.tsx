@@ -13,45 +13,38 @@ export const PlayerList: React.FC<PlayerListProps> = ({
 }) => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
-  const [isFormVisible, setIsFormVisible] = useState<{
-    [key: string]: boolean;
-  }>({});
+  const [isFormVisible, setIsFormVisible] = useState<{ [key: string]: boolean }>(
+    {}
+  );
   const [isLoading, setIsLoading] = useState(true);
   const { token } = useAuth();
   const itemsPerPage = 10;
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedServer, setSelectedServer] = useState<string>("none"); 
-  const [sortOption, setSortOption] = useState<string>("name"); 
+  const [selectedServer, setSelectedServer] = useState<string>("none");
+  const [sortOption, setSortOption] = useState<string>("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc"); // Added for sorting direction
 
   useEffect(() => {
     fetchPlayers();
   }, []);
 
-  useEffect(() => {
-    // Apply sorting and filtering after players are fetched
-    if (players.length > 0) {
-      const sortedPlayers = [...players].sort((a, b) => a.name.localeCompare(b.name));
-      setPlayers(sortedPlayers);
-      setFilteredPlayers(sortedPlayers);
-    }
-  }, [players.length]); // Only run when players are initially loaded
-
   const fetchPlayers = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`${apiUrl}/api/fortniteplayers`);
+      const response = await fetch(`${apiUrl}/api/fortniteplayers`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        }
+      }
+      );
       if (!response.ok) {
         console.error(`Failed to fetch players, status: ${response.status}`);
         return;
       }
       const data: Player[] = await response.json();
-      
-      // Sort players alphabetically when first loaded
-      const sortedPlayers = data.sort((a, b) => a.name.localeCompare(b.name));
-      
-      setPlayers(sortedPlayers);
-      setFilteredPlayers(sortedPlayers);
-      console.log(sortedPlayers);
+      setPlayers(data);
+      setFilteredPlayers(data);
     } catch (error) {
       console.error("Error fetching players:", error);
     } finally {
@@ -69,83 +62,43 @@ export const PlayerList: React.FC<PlayerListProps> = ({
       );
     }
 
-    // Apply server filter if a specific server is selected
+    // Apply server filter
     if (selectedServer !== "none") {
       filtered = filtered.filter((player) => player.server === selectedServer);
     }
 
-    // Apply sorting based on the selected option
-    if (sortOption === "name") {
-      filtered = filtered.sort((a, b) => a.name.localeCompare(b.name));
-    } else if (sortOption === "earnings") {
-      filtered = filtered.sort((a, b) => b.earnings - a.earnings);
-    } else if (sortOption === "age") {
-      filtered = filtered.sort((a, b) => a.age - b.age);
-    }
+    // Apply sorting based on selected option and order
+    filtered.sort((a, b) => {
+      let comparison = 0;
 
-    setPlayers(filtered); // This now updates the main players array
+      if (sortOption === "name") {
+        comparison = a.name.localeCompare(b.name);
+      } else if (sortOption === "earnings") {
+        comparison = a.earnings - b.earnings;
+      } else if (sortOption === "age") {
+        comparison = a.age - b.age;
+      }
+
+      // Adjust sorting direction
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+
     setFilteredPlayers(filtered);
   };
 
   useEffect(() => {
-    // Trigger sorting and filtering when relevant state changes
-    if (players.length > 0) {
-      applyFiltersAndSorting();
-    }
-  }, [selectedServer, sortOption, searchQuery]);
+    applyFiltersAndSorting();
+  }, [selectedServer, sortOption, searchQuery, sortOrder]);
+
+  const handleToggleSortOrder = () => {
+    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+  };
 
   const handleToggleForm = (playerId: number) => {
     setIsFormVisible((prevState) => ({
       ...prevState,
       [playerId]: !prevState[playerId],
     }));
-  };
-
- 
-
-  const handleUpdate = async (updatedPlayer: Player) => {
-    console.log(updatedPlayer);
-    console.log("Update", updatedPlayer.name, updatedPlayer.id);
-
-    try {
-      const response = await fetch(
-        `${apiUrl}/api/fortniteplayers/${updatedPlayer.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(updatedPlayer),
-        }
-      );
-      if (!response.ok) {
-        console.error(`Failed to update player ${updatedPlayer.name}`);
-      }
-      const data = await response.json();
-      console.log(data);
-      setPlayers((prevState) =>
-        prevState.map((player) =>
-          player.id === updatedPlayer.id ? updatedPlayer : player
-        )
-      );
-      setFilteredPlayers((prevState) =>
-        prevState.map((player) =>
-          player.id === updatedPlayer.id ? updatedPlayer : player
-        )
-      );
-      setIsFormVisible((prevState) => ({
-        ...prevState,
-        [updatedPlayer.id]: false,
-      }));
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const handleDelete = async (player: Player) => {
-    console.log(player);
-    console.log("Delete", player.name, player.id);
   };
 
   const totalPages = Math.ceil(filteredPlayers.length / itemsPerPage);
@@ -158,6 +111,11 @@ export const PlayerList: React.FC<PlayerListProps> = ({
     setCurrentPage(page);
   };
 
+    const handleDelete = async (player: Player) => {
+    console.log(player);
+    console.log("Delete", player.name, player.id);
+  };
+
   return (
     <div className="container mx-auto px-4">
       {isLoading ? (
@@ -165,6 +123,7 @@ export const PlayerList: React.FC<PlayerListProps> = ({
       ) : (
         <>
           <div className="mb-4 flex space-x-4">
+            {/* Server Filter */}
             <div>
               <label htmlFor="server" className="mr-2 text-white">
                 Filter by Server
@@ -182,8 +141,9 @@ export const PlayerList: React.FC<PlayerListProps> = ({
               </select>
             </div>
 
+            {/* Sorting Option */}
             <div>
-              <label htmlFor="sort" className="text-white">
+              <label htmlFor="sort" className="mr-2 text-white">
                 Sort by
               </label>
               <select
@@ -197,8 +157,19 @@ export const PlayerList: React.FC<PlayerListProps> = ({
                 <option value="age">Age</option>
               </select>
             </div>
+
+            {/* Sort Order Toggle */}
+            <div>
+              <button
+                onClick={handleToggleSortOrder}
+                className="bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700"
+              >
+                {sortOrder === "asc" ? "Descending" : "Ascending"}
+              </button>
+            </div>
           </div>
 
+          {/* Player List */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {paginatedPlayers.map((player) => (
               <div
@@ -218,9 +189,6 @@ export const PlayerList: React.FC<PlayerListProps> = ({
                 <p className="text-gray-600 mb-4">
                   Age: <span className="font-medium">{player.age}</span>
                 </p>
-                <p className="text-gray-600 mb-4">
-                  Team: <span className="font-medium">{player.teamName}</span>
-                </p>
                 <div className="flex justify-between items-center">
                   <button
                     className="bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors"
@@ -229,9 +197,9 @@ export const PlayerList: React.FC<PlayerListProps> = ({
                     {isFormVisible[player.id] ? "Cancel" : "Edit"}
                   </button>
                   {isFormVisible[player.id] && (
-                    <EditPlayer player={player} onSave={handleUpdate} />
+                    <EditPlayer player={player} onSave={() => {}} />
                   )}
-                  <button
+                   <button
                     className="bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition-colors"
                     onClick={() => handleDelete(player)}
                   >
@@ -242,6 +210,7 @@ export const PlayerList: React.FC<PlayerListProps> = ({
             ))}
           </div>
 
+          {/* Pagination */}
           <div className="flex justify-center mt-6">
             {[...Array(totalPages)].map((_, index) => (
               <button
