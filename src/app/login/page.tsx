@@ -3,13 +3,16 @@
 import { useState } from "react";
 //import { useRouter } from "next/router"
 import { useAuth } from "@/utils/AuthContext";
+import { useRouter } from "next/navigation";
+
+
 
 const Login = () => {
   const { login, error } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
  // const [error, setError] = useState("");
-  //const router = useRouter();
+  const router = useRouter();
 
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -22,7 +25,15 @@ const Login = () => {
     }
   };
 
+  const goToRegister = () => {
+    router.push('/register')
+  }
+
   return (
+    <>
+    <button onClick={goToRegister} className="bg-green-500 text-white p-2 rounded">
+      register
+    </button>
     <form onSubmit={handleLogin} className="flex flex-col p-4 max-w-md mx-auto">
       <input
         type="email"
@@ -43,6 +54,8 @@ const Login = () => {
       </button>
       {error && <p className="text-red-500">{error}</p>}
     </form>
+    </>
+    
   );
 };
 

@@ -9,6 +9,7 @@ interface AuthContextType {
     login: (email: string, password: string) => Promise<void>;
     logout: () => void;
     error: string | null;
+      register: (email: string, password: string, username: string, role: string) => Promise<void>;
 }
 
 
@@ -53,6 +54,56 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setError("Invalid email or password")
         }
     };
+
+    const register = async (email: string, password: string, username: string, role: string) => {
+  try {
+    const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+    if (!apiUrl) {
+      throw new Error("API base URL is not defined");
+    }
+
+    // Log the data for debugging
+    console.log("Registering with data:", { username, email, password, role });
+
+    // Send the POST request
+    const response = await fetch(`${apiUrl}/Auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, email, password, role }),
+    });
+
+    // Log the raw response for debugging
+    const responseText = await response.text();
+    console.log("Raw response from server:", responseText); // Log the raw response text
+
+    // Check if response is not OK
+    if (!response.ok) {
+      // If response isn't OK, show the raw response text for more details
+      throw new Error(`Registration failed. Server responded with: ${responseText}`);
+    }
+
+    // Try parsing the JSON if the response is successful
+    const data = JSON.parse(responseText);
+    console.log("Registration successful, token:", data.token);
+
+    // Store the token in localStorage and set it as a cookie
+    setToken(data.token);
+    localStorage.setItem("authToken", data.token);
+    document.cookie = `token=${data.token}; path=/; secure; httponly; samesite=strict`;
+
+    // Redirect the user based on their role
+    if (role === "admin") {
+      router.push("/search");
+    } else {
+      router.push("/search");
+    }
+  } catch (error) {
+    console.error("Error in registration:", error);
+    setError("Registration failed. Please try again.");
+  }
+};
+
+    
     const logout = () => {
         setToken(null);
         localStorage.removeItem("authToken");
@@ -60,7 +111,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         router.push('/login')
     };
     return (
-        <AuthContext.Provider value={{ token, login, logout, error }}>
+        <AuthContext.Provider value={{ token, login, logout, register, error }}>
             {children}
         </AuthContext.Provider>
     )

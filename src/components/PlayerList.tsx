@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { Player } from "../types/types";
 import EditPlayer from "./EditPlayer";
+import { useAuth } from "@/utils/AuthContext";
+
 interface PlayerListProps {
   apiUrl: string;
   searchQuery: string;
 }
-import { useAuth } from "@/utils/AuthContext";
 
 export const PlayerList: React.FC<PlayerListProps> = ({
   apiUrl,
@@ -13,45 +14,50 @@ export const PlayerList: React.FC<PlayerListProps> = ({
 }) => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
-  const [isFormVisible, setIsFormVisible] = useState<{ [key: string]: boolean }>(
-    {}
-  );
+  const [isFormVisible, setIsFormVisible] = useState<{ [key: string]: boolean }>({});
   const [isLoading, setIsLoading] = useState(true);
   const { token } = useAuth();
   const itemsPerPage = 10;
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedServer, setSelectedServer] = useState<string>("none");
-  const [sortOption, setSortOption] = useState<string>("name");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc"); // Added for sorting direction
+  const [sortOption, setSortOption] = useState<string>("name"); // Default to sorting by name
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc"); // Default to ascending order
 
-  useEffect(() => {
-    fetchPlayers();
-  }, []);
-
-  const fetchPlayers = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch(`${apiUrl}/api/fortniteplayers`, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        }
-      }
-      );
-      if (!response.ok) {
-        console.error(`Failed to fetch players, status: ${response.status}`);
-        return;
-      }
-      const data: Player[] = await response.json();
-      setPlayers(data);
-      setFilteredPlayers(data);
-    } catch (error) {
-      console.error("Error fetching players:", error);
-    } finally {
-      setIsLoading(false);
-    }
+  // Fetch players function (with retry and timeout)
+  const fetchWithTimeout = (url: string, options: RequestInit, timeout: number): Promise<Response> => {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('Request timed out')), timeout);
+      fetch(url, options)
+        .then(resolve)
+        .catch(reject)
+        .finally(() => clearTimeout(timer));
+    });
   };
 
+  const fetchPlayers = async (): Promise<void> => {
+    // Check if players are already fetched (prevents re-fetching)
+    if (players.length > 0) return;
+
+    setIsLoading(true);
+    const response = await fetchWithTimeout(`${apiUrl}/api/fortniteplayers`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }, 7000);
+
+    if (response.ok) {
+      const data: Player[] = await response.json();
+      console.log("Fetched Players:", data); // Log the fetched array of players
+      setPlayers(data);
+      setFilteredPlayers(data);
+    } else {
+      console.error("Failed to fetch players");
+    }
+    setIsLoading(false);
+  };
+
+  // Apply sorting and filtering
   const applyFiltersAndSorting = () => {
     let filtered = [...players];
 
@@ -74,26 +80,38 @@ export const PlayerList: React.FC<PlayerListProps> = ({
       if (sortOption === "name") {
         comparison = a.name.localeCompare(b.name);
       } else if (sortOption === "earnings") {
-        comparison = a.earnings - b.earnings;
+        comparison = (a.earnings || 0) - (b.earnings || 0);
       } else if (sortOption === "age") {
-        comparison = a.age - b.age;
+        comparison = (a.age || 0) - (b.age || 0);
       }
 
-      // Adjust sorting direction
+      // Adjust sorting direction (ascending or descending)
       return sortOrder === "asc" ? comparison : -comparison;
     });
 
     setFilteredPlayers(filtered);
   };
 
+  // Call `applyFiltersAndSorting` when relevant states change
+  useEffect(() => {
+    fetchPlayers();
+  }, [apiUrl, token]); // Only call fetchPlayers once (on first load)
+
   useEffect(() => {
     applyFiltersAndSorting();
-  }, [selectedServer, sortOption, searchQuery, sortOrder]);
+  }, [searchQuery, selectedServer, sortOption, sortOrder, players]);
 
+  // Handle page change (pagination)
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  // Handle sorting order toggle
   const handleToggleSortOrder = () => {
     setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
   };
 
+  // Handle toggle form visibility (Edit button)
   const handleToggleForm = (playerId: number) => {
     setIsFormVisible((prevState) => ({
       ...prevState,
@@ -106,15 +124,6 @@ export const PlayerList: React.FC<PlayerListProps> = ({
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
-    const handleDelete = async (player: Player) => {
-    console.log(player);
-    console.log("Delete", player.name, player.id);
-  };
 
   return (
     <div className="container mx-auto px-4">
@@ -183,8 +192,7 @@ export const PlayerList: React.FC<PlayerListProps> = ({
                   Server: <span className="font-medium">{player.server}</span>
                 </p>
                 <p className="text-gray-600 mb-2">
-                  Earnings:{" "}
-                  <span className="font-medium">{player.earnings}</span>
+                  Earnings: <span className="font-medium">{player.earnings}</span>
                 </p>
                 <p className="text-gray-600 mb-4">
                   Age: <span className="font-medium">{player.age}</span>
@@ -199,12 +207,6 @@ export const PlayerList: React.FC<PlayerListProps> = ({
                   {isFormVisible[player.id] && (
                     <EditPlayer player={player} onSave={() => {}} />
                   )}
-                   <button
-                    className="bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition-colors"
-                    onClick={() => handleDelete(player)}
-                  >
-                    Delete
-                  </button>
                 </div>
               </div>
             ))}
