@@ -33,7 +33,7 @@ const Register = () => {
       }
 
       if (role === "admin") {
-        setRole('Regular')
+        setRole('regular')
         await register(email, password, username, role)
 
         const response = await fetch(`${apiUrl}/api/FortnitePlayers/actions/request-admin-access`, {
