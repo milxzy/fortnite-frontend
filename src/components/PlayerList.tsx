@@ -41,7 +41,8 @@ const fetchWithTimeout = async (
     // Only clear the timer if the fetch is successful
 
     return response;
-  } catch (error) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any ) {
     // Handle the abort error properly
     if (error.name === "AbortError") {
       throw new Error("Request timed out");
