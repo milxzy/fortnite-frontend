@@ -52,7 +52,7 @@ const Login = () => {
   </button>
   {error && <p className="text-red-500">{error}</p>}
   
-  <button onClick={goToRegister} className="bg-green-500 text-white p-2 rounded w-full h-12">
+  <button onClick={goToRegister} className="bg-green-500  text-white p-2 rounded w-full h-12">
     Register
   </button>
 </form>
