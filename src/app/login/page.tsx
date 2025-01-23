@@ -31,29 +31,35 @@ const Login = () => {
 
   return (
     <>
-    <button onClick={goToRegister} className="bg-green-500 text-white p-2 rounded">
-      register
-    </button>
-    <form onSubmit={handleLogin} className="flex flex-col p-4 max-w-md mx-auto">
-      <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className="border p-2 rounded mb-2 text-black"
-      />
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        className="border p-2 rounded mb-2 text-black"
-      />
-      <button type="submit" className="bg-blue-500 text-white p-2 rounded">
-        Login
-      </button>
-      {error && <p className="text-red-500">{error}</p>}
-    </form>
+
+<form onSubmit={handleLogin} className="flex flex-col p-4 max-w-md mx-auto">
+  <input
+    type="email"
+    placeholder="Email"
+    value={email}
+    onChange={(e) => setEmail(e.target.value)}
+    className="border p-2 rounded mb-2 text-black"
+  />
+  <input
+    type="password"
+    placeholder="Password"
+    value={password}
+    onChange={(e) => setPassword(e.target.value)}
+    className="border p-2 rounded mb-2 text-black"
+  />
+  <button type="submit" className="bg-blue-500 text-white p-2 rounded w-full h-12 mb-2">
+    Login
+  </button>
+  {error && <p className="text-red-500">{error}</p>}
+  
+  <button onClick={goToRegister} className="bg-green-500 text-white p-2 rounded w-full h-12">
+    Register
+  </button>
+</form>
+
+
+
+
     </>
     
   );
