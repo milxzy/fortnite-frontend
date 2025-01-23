@@ -24,38 +24,67 @@ export const PlayerList: React.FC<PlayerListProps> = ({
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc"); // Default to ascending order
 
   // Fetch players function (with retry and timeout)
-  const fetchWithTimeout = (url: string, options: RequestInit, timeout: number): Promise<Response> => {
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('Request timed out')), timeout);
-      fetch(url, options)
-        .then(resolve)
-        .catch(reject)
-        .finally(() => clearTimeout(timer));
-    });
-  };
+const fetchWithTimeout = async (
+  url: string,
+  options: RequestInit,
+  timeout: number
+): Promise<Response> => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
 
-  const fetchPlayers = async (): Promise<void> => {
-    // Check if players are already fetched (prevents re-fetching)
-    if (players.length > 0) return;
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    if(players.length > 1){
 
-    setIsLoading(true);
-    const response = await fetchWithTimeout(`${apiUrl}/api/fortniteplayers`, {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    }, 7000);
-
-    if (response.ok) {
-      const data: Player[] = await response.json();
-      console.log("Fetched Players:", data); // Log the fetched array of players
-      setPlayers(data);
-      setFilteredPlayers(data);
-    } else {
-      console.error("Failed to fetch players");
+    clearTimeout(timer);
     }
+    // Only clear the timer if the fetch is successful
+
+    return response;
+  } catch (error) {
+    // Handle the abort error properly
+    if (error.name === "AbortError") {
+      throw new Error("Request timed out");
+    }
+    throw error;
+  }
+};
+
+
+
+const fetchPlayers = async (): Promise<void> => {
+  try {
+    setIsLoading(true);
+    const response = await fetchWithTimeout(
+      `${apiUrl}/api/fortniteplayers`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      },
+      7000 // timeout in milliseconds
+    );
+
+    if (!response.ok) {
+      console.error(`Failed to fetch players: ${response.statusText}`);
+      return;
+    }
+
+    const data: Player[] = await response.json();
+    console.log("Fetched Players:", data); // Log the fetched array of players
+    setPlayers(data);
+    setFilteredPlayers(data);
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error("Error fetching players:", error.message);
+    } else {
+      console.error("An unknown error occurred");
+    }
+  } finally {
     setIsLoading(false);
-  };
+  }
+};
 
   // Apply sorting and filtering
   const applyFiltersAndSorting = () => {
