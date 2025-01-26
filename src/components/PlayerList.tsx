@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Player } from "../types/types";
 import EditPlayer from "./EditPlayer";
 import { useAuth } from "@/utils/AuthContext";
+import local from "next/font/local";
 
 interface PlayerListProps {
   apiUrl: string;
@@ -24,68 +25,111 @@ export const PlayerList: React.FC<PlayerListProps> = ({
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc"); // Default to ascending order
 
   // Fetch players function (with retry and timeout)
-const fetchWithTimeout = async (
-  url: string,
-  options: RequestInit,
-  timeout: number
-): Promise<Response> => {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeout);
+  const fetchWithTimeout = async (
+    url: string,
+    options: RequestInit,
+    timeout: number
+  ): Promise<Response> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
 
-  try {
-    const response = await fetch(url, { ...options, signal: controller.signal });
-    if(players.length > 1){
-
-    clearTimeout(timer);
+    try {
+      const response = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timer); // Ensure the timer is cleared when the response is received
+      return response;
+    } catch (error: any) {
+      if (error.name === "AbortError") {
+        throw new Error("Request timed out");
+      }
+      throw error;
     }
-    // Only clear the timer if the fetch is successful
+  };
 
-    return response;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any ) {
-    // Handle the abort error properly
-    if (error.name === "AbortError") {
-      throw new Error("Request timed out");
-    }
-    throw error;
-  }
-};
-
-
-
-const fetchPlayers = async (): Promise<void> => {
-  try {
-    setIsLoading(true);
-    const response = await fetchWithTimeout(
-      `${apiUrl}/api/fortniteplayers`,
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+  const fetchPlayers = async (): Promise<void> => {
+    try {
+      setIsLoading(true);
+      const response = await fetchWithTimeout(
+        `${apiUrl}/api/fortniteplayers`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
         },
+        15000 // increased timeout for testing
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Failed to fetch players:", response.status, errorData);
+        return;
+      }
+
+      const data: Player[] = await response.json();
+      setPlayers(data);
+      setFilteredPlayers(data);
+    } catch (error) {
+      alert('You have insufficient permissions, apply for admin role. We will show you what your edit looks like, but it will NOT be saved to our database')
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Update player information
+const updatePlayer = async (updatedPlayer: Player) => {
+  console.log(updatedPlayer); // Log the updated player data
+
+  // Update player list with the new data
+  const updatedPlayers = players.map((player) =>
+    player.id === updatedPlayer.id ? updatedPlayer : player
+  );
+  setPlayers(updatedPlayers);
+
+  try {
+    const token = localStorage.getItem("authToken");
+    console.log (token)
+
+    if (!token) {
+      console.log('No token found');
+      window.location.href = '/login';
+      return; // Exit early if no token
+    }
+
+    // Make the PUT request to update the player
+    const response = await fetch(`https://goldfish-app-hqk2o.ondigitalocean.app/api/fortniteplayers/${updatedPlayer.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
-      7000 // timeout in milliseconds
-    );
-
-    if (!response.ok) {
-      console.error(`Failed to fetch players: ${response.statusText}`);
-      return;
-    }
-
-    const data: Player[] = await response.json();
-    console.log("Fetched Players:", data); // Log the fetched array of players
-    setPlayers(data);
-    setFilteredPlayers(data);
-  } catch (error) {
-    if (error instanceof Error) {
-      console.error("Error fetching players:", error.message);
+      body: JSON.stringify(updatedPlayer),
+      redirect: 'manual', // Send the correct player data
+    });
+    
+    if (response.ok) {
+      const updatedPlayerData = await response.json(); // Get updated player data from the response
+      console.log('Player updated successfully:', updatedPlayerData);
     } else {
-      console.error("An unknown error occurred");
+      throw new Error('Failed to update player');
     }
-  } finally {
-    setIsLoading(false);
+
+  } catch (error) {
+    console.error('Error updating player:', error);
+    // Optionally, set an error state to display to the user
+    // setError('Failed to update player');
   }
+
+  // Update filtered players as well
+  setFilteredPlayers(updatedPlayers);
+
+  // Close the edit form
+  setIsFormVisible((prevState) => ({
+    ...prevState,
+    [updatedPlayer.id]: false,
+  }));
 };
+
+
 
   // Apply sorting and filtering
   const applyFiltersAndSorting = () => {
@@ -235,7 +279,10 @@ const fetchPlayers = async (): Promise<void> => {
                     {isFormVisible[player.id] ? "Cancel" : "Edit"}
                   </button>
                   {isFormVisible[player.id] && (
-                    <EditPlayer player={player} onSave={() => {}} />
+                    <EditPlayer
+                      player={player}
+                      onSave={updatePlayer} // Pass the update function
+                    />
                   )}
                 </div>
               </div>
