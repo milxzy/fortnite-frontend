@@ -37,7 +37,7 @@ export const PlayerList: React.FC<PlayerListProps> = ({
       const response = await fetch(url, { ...options, signal: controller.signal });
       clearTimeout(timer); // Ensure the timer is cleared when the response is received
       return response;
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error instanceof DOMException && error.name === "AbortError") {
         throw new Error("Request timed out");
       }
