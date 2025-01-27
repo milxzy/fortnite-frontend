@@ -311,4 +311,9 @@ const updatePlayer = async (updatedPlayer: Player) => {
   );
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line react-hooks/exhaustive-deps
+
+
 export default PlayerList;
