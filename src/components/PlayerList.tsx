@@ -69,7 +69,7 @@ export const PlayerList: React.FC<PlayerListProps> = ({
       setPlayers(data);
       setFilteredPlayers(data);
     } catch (error) {
-      alert('You have insufficient permissions, apply for admin role. We will show you what your edit looks like, but it will NOT be saved to our database')
+      
       console.error(error)
     } finally {
       setIsLoading(false);
