@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Player } from "../types/types";
 import EditPlayer from "./EditPlayer";
 import { useAuth } from "@/utils/AuthContext";
-import local from "next/font/local";
+// import local from "next/font/local";
 
 interface PlayerListProps {
   apiUrl: string;
