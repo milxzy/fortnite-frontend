@@ -1,4 +1,4 @@
-import { Dispatch, useState } from "react";
+import { useState } from "react";
 import { Player } from "../types/types";
 
 interface EditPlayerProps {
