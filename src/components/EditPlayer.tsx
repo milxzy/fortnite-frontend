@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { Dispatch, useState } from "react";
 import { Player } from "../types/types";
 
 interface EditPlayerProps {
   player: Player;
   onSave: (updatedPlayer: Player) => void;
   //hasEditPermission: boolean; // Prop for permission checking
+
 }
 
 const EditPlayer: React.FC<EditPlayerProps> = ({
@@ -30,8 +31,11 @@ const EditPlayer: React.FC<EditPlayerProps> = ({
       setError("Invalid data. Please check your inputs.");
       return;
     }
+    alert('You must be an admin to edit this player, we will show your changes locally, but it will not be reflected in the database.')
+    // setIsFormVisible(false)
     setError(null); // Clear any previous errors
     onSave(formData);
+    // onSave(formData);
   };
 
   return (

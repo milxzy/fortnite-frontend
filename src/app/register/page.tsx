@@ -15,7 +15,7 @@ const Register = () => {
 
   const router = useRouter()
 
-    useEffect(() => {
+  useEffect(() => {
     if (token) {
       router.push("/search");
     }
@@ -51,16 +51,17 @@ const Register = () => {
         }
 
         setMessage("Admin access request sent successfully!");
+        alert("Admin request sent successfully!");
         return; // Avoid proceeding to `register` call
       } if (role !== "admin") {
         register(email, password, username, role)
       }
-        
+
 
 
 
       // Register the user in your auth system
-      
+
       setMessage("Registration successful!");
       setError(null); // Clear any previous errors
     } catch (err: unknown) {

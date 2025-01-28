@@ -69,7 +69,7 @@ export const PlayerList: React.FC<PlayerListProps> = ({
       setPlayers(data);
       setFilteredPlayers(data);
     } catch (error) {
-      
+
       console.error(error)
     } finally {
       setIsLoading(false);
@@ -77,58 +77,58 @@ export const PlayerList: React.FC<PlayerListProps> = ({
   };
 
   // Update player information
-const updatePlayer = async (updatedPlayer: Player) => {
-  console.log(updatedPlayer); // Log the updated player data
+  const updatePlayer = async (updatedPlayer: Player) => {
+    console.log(updatedPlayer); // Log the updated player data
 
-  // Update player list with the new data
-  const updatedPlayers = players.map((player) =>
-    player.id === updatedPlayer.id ? updatedPlayer : player
-  );
-  setPlayers(updatedPlayers);
+    // Update player list with the new data
+    const updatedPlayers = players.map((player) =>
+      player.id === updatedPlayer.id ? updatedPlayer : player
+    );
+    setPlayers(updatedPlayers);
 
-  try {
-    const token = localStorage.getItem("authToken");
-    console.log (token)
+    try {
+      const token = localStorage.getItem("authToken");
+      console.log(token)
 
-    if (!token) {
-      console.log('No token found');
-      window.location.href = '/login';
-      return; // Exit early if no token
+      if (!token) {
+        console.log('No token found');
+        window.location.href = '/login';
+        return; // Exit early if no token
+      }
+
+      // Make the PUT request to update the player
+      const response = await fetch(`https://goldfish-app-hqk2o.ondigitalocean.app/api/fortniteplayers/${updatedPlayer.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(updatedPlayer),
+        redirect: 'manual', // Send the correct player data
+      });
+
+      if (response.ok) {
+        const updatedPlayerData = await response.json(); // Get updated player data from the response
+        console.log('Player updated successfully:', updatedPlayerData);
+      } else {
+        throw new Error('Failed to update player');
+      }
+
+    } catch (error) {
+      console.error('Error updating player:', error);
+      // Optionally, set an error state to display to the user
+      // setError('Failed to update player');
     }
 
-    // Make the PUT request to update the player
-    const response = await fetch(`https://goldfish-app-hqk2o.ondigitalocean.app/api/fortniteplayers/${updatedPlayer.id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify(updatedPlayer),
-      redirect: 'manual', // Send the correct player data
-    });
-    
-    if (response.ok) {
-      const updatedPlayerData = await response.json(); // Get updated player data from the response
-      console.log('Player updated successfully:', updatedPlayerData);
-    } else {
-      throw new Error('Failed to update player');
-    }
+    // Update filtered players as well
+    setFilteredPlayers(updatedPlayers);
 
-  } catch (error) {
-    console.error('Error updating player:', error);
-    // Optionally, set an error state to display to the user
-    // setError('Failed to update player');
-  }
-
-  // Update filtered players as well
-  setFilteredPlayers(updatedPlayers);
-
-  // Close the edit form
-  setIsFormVisible((prevState) => ({
-    ...prevState,
-    [updatedPlayer.id]: false,
-  }));
-};
+    // Close the edit form
+    setIsFormVisible((prevState) => ({
+      ...prevState,
+      [updatedPlayer.id]: false,
+    }));
+  };
 
 
 
@@ -282,7 +282,13 @@ const updatePlayer = async (updatedPlayer: Player) => {
                   {isFormVisible[player.id] && (
                     <EditPlayer
                       player={player}
-                      onSave={updatePlayer} // Pass the update function
+                      onSave={(updatedPlayer) => {
+                        updatePlayer(updatedPlayer);
+                        setIsFormVisible((prevState) => ({
+                          ...prevState,
+                          [player.id]: false, // Close the edit form after saving
+                        }));
+                      }}
                     />
                   )}
                 </div>
@@ -296,11 +302,10 @@ const updatePlayer = async (updatedPlayer: Player) => {
               <button
                 key={index}
                 onClick={() => handlePageChange(index + 1)}
-                className={`px-4 py-2 mx-1 rounded ${
-                  currentPage === index + 1
+                className={`px-4 py-2 mx-1 rounded ${currentPage === index + 1
                     ? "bg-blue-500 text-white"
                     : "bg-gray-200 text-gray-700"
-                }`}
+                  }`}
               >
                 {index + 1}
               </button>

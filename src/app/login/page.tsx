@@ -27,8 +27,8 @@ const Login = () => {
   };
 
   return (
-    <>
-      <form onSubmit={handleLogin} className="flex flex-col p-4 max-w-md mx-auto">
+    <div className="flex flex-col p-4 max-w-md mx-auto">
+      <form onSubmit={handleLogin} className="flex flex-col w-full">
         <input
           type="email"
           placeholder="Email"
@@ -47,16 +47,21 @@ const Login = () => {
           Login
         </button>
         {error && <p className="text-red-500">{error}</p>}
-        
-        <button onClick={goToRegister} className="bg-green-500 text-white p-2 rounded w-full h-12 mb-2">
-          Register
-        </button>
-        <button onClick={goToSearch} className="bg-yellow-500 text-white p-2 rounded w-full h-12">
-          Go to Search
-        </button>
       </form>
-    </>
+      <button
+        onClick={goToRegister}
+        className="bg-green-500 text-white p-2 rounded w-full h-12 mb-2 mt-2"
+      >
+        Register
+      </button>
+      <button
+        onClick={goToSearch}
+        className="bg-yellow-500 text-white p-2 rounded w-full h-12"
+      >
+        Go to Search
+      </button>
+    </div>
   );
-};
+}
 
 export default Login;
